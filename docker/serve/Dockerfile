@@ -43,17 +43,21 @@ RUN pip install openmim
 RUN mim install mmengine
 RUN mim install mmcv==${MMCV}
 RUN mim install mmdet==${MMDET}
-RUN mim install mmdet3d==${MMDET3D}
+
+# add installation pipeline for modified code
+COPY ./ /tmp/mmdet3d/
+RUN pip install /tmp/mmdet3d
+#RUN mim install mmdet3d==${MMDET3D}
 
 RUN useradd -m model-server \
     && mkdir -p /home/model-server/tmp
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./docker/serve/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && chown -R model-server /home/model-server
 
-COPY config.properties /home/model-server/config.properties
+COPY ./docker/serve/config.properties /home/model-server/config.properties
 RUN mkdir /home/model-server/model-store && chown -R model-server /home/model-server/model-store
 
 EXPOSE 8080 8081 8082

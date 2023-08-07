@@ -619,8 +619,12 @@ class LoadPointsFromFile(BaseTransform):
             np.ndarray: An array containing point clouds data.
         """
         try:
-            pts_bytes = get(pts_filename, backend_args=self.backend_args)
-            points = np.frombuffer(pts_bytes, dtype=np.float32)
+            ''' Add new condition for bytearray in TorchServe pipeline <@j911>'''
+            if isinstance(pts_filename, bytearray):
+                points = np.frombuffer(pts_filename, dtype=np.float32)
+            else:
+                pts_bytes = get(pts_filename, backend_args=self.backend_args)
+                points = np.frombuffer(pts_bytes, dtype=np.float32)
         except ConnectionError:
             mmengine.check_file_exist(pts_filename)
             if pts_filename.endswith('.npy'):

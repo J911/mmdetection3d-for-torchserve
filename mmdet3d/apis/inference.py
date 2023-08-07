@@ -140,7 +140,11 @@ def inference_detector(model: nn.Module,
 
     cfg = model.cfg
 
-    if not isinstance(pcds[0], str):
+    ''' Add new condition for bytearray in TorchServe pipeline <@j911>'''
+    if isinstance(pcds[0], bytearray):
+        cfg = cfg.copy()
+
+    elif not isinstance(pcds[0], str):
         cfg = cfg.copy()
         # set loading pipeline type
         cfg.test_dataloader.dataset.pipeline[0].type = 'LoadPointsFromDict'
@@ -154,7 +158,18 @@ def inference_detector(model: nn.Module,
     data = []
     for pcd in pcds:
         # prepare data
-        if isinstance(pcd, str):
+        ''' Add new condition for bytearray in TorchServe pipeline <@j911>'''
+        if isinstance(pcd, bytearray):
+            # load from point cloud file
+             data_ = dict(
+                 lidar_points=dict(lidar_path=pcd),
+                 timestamp=1,
+                 # for ScanNet demo we need axis_align_matrix
+                 axis_align_matrix=np.eye(4),
+                 box_type_3d=box_type_3d,
+                 box_mode_3d=box_mode_3d)
+
+        elif isinstance(pcd, str):
             # load from point cloud file
             data_ = dict(
                 lidar_points=dict(lidar_path=pcd),

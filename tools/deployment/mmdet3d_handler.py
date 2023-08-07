@@ -60,16 +60,17 @@ class MMdet3dHandler(BaseHandler):
             if isinstance(pts, str):
                 pts = base64.b64decode(pts)
 
-            points = np.frombuffer(pts, dtype=np.float32)
-            points = points.reshape(-1, self.load_dim)
-            points = points[:, self.use_dim]
-            points_class = get_points_type(self.coord_type)
-            points = points_class(
-                points,
-                points_dim=points.shape[-1],
-                attribute_dims=self.attribute_dims)
+            """ Ignore this code <@j911>"""
+            # points = np.frombuffer(pts, dtype=np.float32)
+            # points = points.reshape(-1, self.load_dim)
+            # points = points[:, self.use_dim]
+            # points_class = get_points_type(self.coord_type)
+            # points = points_class(
+            #     points,
+            #     points_dim=points.shape[-1],
+            #     attribute_dims=self.attribute_dims)
 
-        return points
+        return pts
 
     def inference(self, data):
         """Inference Function.
@@ -101,7 +102,35 @@ class MMdet3dHandler(BaseHandler):
             List: The post process function returns a list of the predicted
                 output.
         """
-        output = []
+        scores = data.pred_instances_3d.scores_3d.detach().cpu().numpy().tolist()
+        boxes = data.pred_instances_3d.bboxes_3d.detach().cpu().numpy().tolist()
+        labels = data.pred_instances_3d.labels_3d.detach().cpu().numpy().tolist()
+        output = [[]]
+        for score, box, label in zip(scores, boxes, labels):
+            anno = {
+                    "obj_id": "",
+                    "obj_type": "%d (%f)" % (label, score),
+                    "psr": {
+                        "position": {
+                        "x": box[0],
+                        "y": box[1],
+                        "z": box[2] + box[5]/2
+                        },
+                        "rotation": {
+                            "x": 0,
+                            "y": 0,
+                            "z": box[6]
+                        },
+                        "scale": {
+                            "x": box[3],
+                            "y": box[4],
+                            "z": box[5]
+                        }
+                    }
+                }
+            output[0].append(anno)
+
+        '''
         for pts_index, result in enumerate(data):
             output.append([])
             if 'pts_bbox' in result.keys():
@@ -116,5 +145,5 @@ class MMdet3dHandler(BaseHandler):
             score = pred_scores[index].tolist()
 
             output[pts_index].append({'3dbbox': bbox_coords, 'score': score})
-
+        '''
         return output
