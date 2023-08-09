@@ -8,7 +8,8 @@ from ts.torch_handler.base_handler import BaseHandler
 
 from mmdet3d.apis import inference_detector, init_model
 from mmdet3d.structures.points import get_points_type
-
+from pypcd import pypcd
+from io import StringIO as sio
 
 class MMdet3dHandler(BaseHandler):
     """MMDetection3D Handler used in TorchServe.
@@ -59,6 +60,22 @@ class MMdet3dHandler(BaseHandler):
             pts = row.get('data') or row.get('body')
             if isinstance(pts, str):
                 pts = base64.b64decode(pts)
+
+            """ New scope for PCD file format <@j911>"""
+            if row.get('format') is not None:
+                file_format = str(row.get('format').decode('utf-8'))
+                if file_format == "pcd":
+                    fileobj = sio(str(pts.decode('utf-8')))
+                    pcd_data = pypcd.point_cloud_from_fileobj(fileobj)
+                    pts = np.zeros([pcd_data.width, 4], dtype=np.float32)
+                    pts[:, 0] = pcd_data.pc_data['x'].copy()
+                    pts[:, 1] = pcd_data.pc_data['y'].copy()
+                    pts[:, 2] = pcd_data.pc_data['z'].copy()
+                    pts[:, 3] = pcd_data.pc_data['intensity'].copy().astype(np.float32) / 255.
+                else:
+                    pts = np.frombuffer(pts, dtype=np.float32)
+                    pts = pts.reshape(-1, self.load_dim)
+                    pts = pts[:, self.use_dim]
 
             """ Ignore this code <@j911>"""
             # points = np.frombuffer(pts, dtype=np.float32)

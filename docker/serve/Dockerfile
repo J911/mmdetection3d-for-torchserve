@@ -39,6 +39,7 @@ RUN pip install torchserve torch-model-archiver
 # MMLAB
 ARG PYTORCH
 ARG CUDA
+RUN pip install git+https://github.com/klintan/pypcd.git
 RUN pip install openmim
 RUN mim install mmengine
 RUN mim install mmcv==${MMCV}
